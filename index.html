@@ -233,6 +233,53 @@
     font-size: 0.9em;
     color: var(--sky);
   }
+  .note-breakdown{
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .tok-row{
+    display:flex;
+    gap: 10px;
+    align-items:flex-start;
+  }
+  .tok-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    padding: 3px 9px;
+    border-radius: 3px;
+    white-space: pre;
+    flex-shrink: 0;
+    border: 1px solid var(--divider);
+    line-height: 1.6;
+  }
+  .tok-chip.k-mnemonic{ color: var(--sky); border-color: rgba(126,193,232,0.35); background: rgba(126,193,232,0.08); }
+  .tok-chip.k-operand{ color: var(--ink); border-color: var(--divider); background: var(--panel-2); }
+  .tok-chip.k-directive{ color: var(--teal); border-color: rgba(95,196,187,0.35); background: rgba(95,196,187,0.08); }
+  .tok-chip.k-label-def{ color: var(--amber); border-color: rgba(227,179,65,0.35); background: rgba(227,179,65,0.08); }
+  .tok-chip.k-comment, .tok-chip.k-comment-line{ color: var(--comment); border-color: var(--divider); background: transparent; font-style: italic; }
+  .tok-desc{
+    font-size: 0.87rem;
+    line-height: 1.55;
+    color: var(--ink-dim);
+    padding-top: 4px;
+  }
+  .tok-desc code{
+    font-family:'IBM Plex Mono', monospace;
+    background: var(--panel-2);
+    padding: 0 4px;
+    border-radius: 2px;
+    color: var(--sky);
+  }
+  .note-summary-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    margin: 2px 0 8px;
+  }
   .note-nav{
     display:flex;
     justify-content:space-between;
@@ -347,6 +394,8 @@
         <span class="section" id="note-section">—</span>
       </div>
       <div class="note-line-code" id="note-code">Select a line to begin.</div>
+      <div class="note-breakdown" id="note-breakdown"></div>
+      <div class="note-summary-label" id="note-summary-label" style="display:none;">In short</div>
       <div class="note-body" id="note-body">Click any line on the left, or use Next to start at the top of the file.</div>
       <div class="note-nav">
         <button class="nav-btn" id="prev-btn">◂ prev</button>
@@ -380,6 +429,14 @@
             <dt>4</dt><dd>print the null-terminated string at the address in $a0</dd>
             <dt>5</dt><dd>read an integer from input into $v0</dd>
             <dt>10</dt><dd>exit the program</dd>
+          </dl>
+        </div>
+        <div class="legend-col">
+          <h4>Addressing: offset($reg)</h4>
+          <dl>
+            <dt>syntax</dt><dd><code>N($reg)</code> means "the memory address stored in $reg, plus N bytes"</dd>
+            <dt>why 4?</dt><dd>each word is 4 bytes, so offsets 0, 4, 8… step through consecutive array slots</dd>
+            <dt>example</dt><dd>if $s0 points at fibs[0], then 4($s0) is fibs[1] and 8($s0) is fibs[2]</dd>
           </dl>
         </div>
         <div class="legend-col">
@@ -448,11 +505,12 @@ const FILES = {
       {n:6, code:'.text', type:'directive', section:'Setup',
         note:'Starts the text segment — the program\'s instructions begin here.'},
       {n:7, code:'      la   $s0, fibs        # load address of array', type:'instr', section:'Setup',
-        note:'Loads the base address of the <code>fibs</code> array into <code>$s0</code>. <code>$s0</code>–<code>$s7</code> are "saved" registers used for values that persist across the loop; here <code>$s0</code> acts as a moving pointer into the array.'},
+        note:'<code>fibs</code> (declared on line 3) is a 19-word block of memory — think of it as 19 numbered mailboxes sitting next to each other. <code>la</code> = "load address": it puts the memory address of the <i>first</i> mailbox, <code>fibs[0]</code>, into register <code>$s0</code>. <code>$s0</code>–<code>$s7</code> are "saved" registers, meant to hold values that stay valid across the whole loop — here $s0 will act as a pointer that walks along the array as the loop runs.'},
       {n:8, code:'      la   $s5, size        # load address of size variable', type:'instr', section:'Setup',
-        note:'Loads the <i>address</i> of <code>size</code> into <code>$s5</code> — not its value yet, just where to find it.'},
+        note:'<code>size</code> (declared on line 4) is a single memory word holding the number 19. This line loads the <i>address</i> of that word into <code>$s5</code> — not the number 19 itself yet, just where to go looking for it. That distinction matters: right now $s5 is a location, not a value.'},
       {n:9, code:'      lw   $s5, 0($s5)      # load array size', type:'instr', section:'Setup',
-        note:'<code>lw</code> = "load word." Reads the value stored at address <code>$s5</code>, dereferencing the pointer from the previous line, and overwrites <code>$s5</code> with the actual size, 19.'},
+        hints:{'$s5':'currently holds the address of size, loaded on the line above'},
+        note:'<code>lw</code> = "load word" — the opposite of <code>sw</code>, it reads memory into a register. <code>0($s5)</code> means "go to the address currently in $s5, offset by 0," and read the value sitting there. That value is 19. This line then overwrites <code>$s5</code> with that 19, replacing the address it held a moment ago. So after this line, $s5 no longer means "the address of size" — it just means "19."'},
       {n:10, code:'', type:'blank'},
       {n:11, code:'# Optional: user inputs the number of Fibonacci numbers to generate', type:'comment', section:'Disabled input',
         note:'Introduces an optional feature: letting the user type in how many numbers to generate instead of hardcoding 19. None of the lines below actually run.'},
@@ -474,35 +532,46 @@ const FILES = {
         note:'Would copy the validated user input from <code>$v0</code> into <code>$s5</code>, replacing the hardcoded size of 19.'},
       {n:20, code:'      ', type:'blank'},
       {n:21, code:'      li   $s2, 1           # 1 is the known value of first and second Fib. number', type:'instr', section:'Seed values',
-        note:'Loads the constant 1 into <code>$s2</code> — both F(0) and F(1) in this sequence start at 1.'},
+        note:'Loads the constant 1 into register <code>$s2</code>. Registers are just small storage slots the CPU can compute with directly — after this line, whatever <code>$s2</code> held before is gone, and it now holds 1. This is the starting value: both F(0) and F(1), the first and second Fibonacci numbers, are defined as 1.'},
       {n:22, code:'      sw   $s2, 0($s0)      # F[0] = 1', type:'instr', section:'Seed values',
-        note:'<code>sw</code> = "store word." Writes the value in <code>$s2</code> into <code>fibs[0]</code>, the first slot pointed to by <code>$s0</code>.'},
+        hints:{'$s2':'currently holds 1, loaded on the line above', '$s0':'currently points at fibs[0], set up on line 7'},
+        note:'<code>sw</code> = "store word" — it copies a register\'s value out into memory. <code>$s2</code> is 1 right now (from the line above). <code>$s0</code> holds the memory <i>address</i> of the array\'s first element, <code>fibs[0]</code> (set up back on line 7). The <code>0($s0)</code> addressing means "the address stored in $s0, plus an offset of 0 bytes" — so this instruction writes 1 into <code>fibs[0]</code>. <code>fibs</code> is just the 19-word block of memory declared on line 3; <code>fibs[0]</code> is its first word.'},
       {n:23, code:'      sw   $s2, 4($s0)      # F[1] = F[0] = 1', type:'instr', section:'Seed values',
-        note:'Writes the same value into <code>fibs[1]</code>, 4 bytes after <code>fibs[0]</code> (each word is 4 bytes) — seeding the sequence with its first two numbers.'},
+        hints:{'$s2':'still holds 1, unchanged since two lines ago', '$s0':'still points at fibs[0], unchanged since line 7'},
+        note:'Same idea, different offset: <code>4($s0)</code> means "the address in $s0, plus 4 bytes." Since each word is 4 bytes, that lands exactly one slot after <code>fibs[0]</code> — i.e. <code>fibs[1]</code>. <code>$s2</code> is still 1, so this writes <code>fibs[1] = 1</code> too. The array now holds <code>[1, 1, 0, 0, ...]</code>, seeding the sequence with its first two numbers.'},
       {n:24, code:'      addi $s1, $s5, -2     # Counter for loop, will execute (size-2) times', type:'instr', section:'Seed values',
-        note:'<code>addi</code> = "add immediate." Computes <code>size - 2</code> into <code>$s1</code>, a countdown counter — since the first two numbers are already filled in, only <code>size - 2</code> more need computing.'},
+        hints:{'$s5':'currently holds 19, loaded back on line 9'},
+        note:'<code>addi</code> = "add immediate" — add a register and a literal number. <code>$s5</code> holds 19 (loaded back on line 9), so this computes <code>19 - 2 = 17</code> and stores it in <code>$s1</code>. <code>$s1</code> becomes a countdown counter: since <code>fibs[0]</code> and <code>fibs[1]</code> are already filled in, exactly 17 more numbers need computing.'},
       {n:25, code:'      ', type:'blank'},
       {n:26, code:'      # Loop to compute each Fibonacci number using the previous two Fib. numbers.', type:'comment', section:'Loop',
         note:'Explains the loop\'s purpose: each new Fibonacci number is the sum of the previous two.'},
       {n:27, code:'loop: lw   $s3, 0($s0)      # Get value from array F[n-2]', type:'label', section:'Loop',
-        note:'The <code>loop:</code> label marks the top of the repeating block. Loads <code>fibs[n-2]</code> — the slot <code>$s0</code> currently points at — into <code>$s3</code>.'},
+        hints:{'$s0':'points at fibs[n-2] for whichever pass this is — fibs[0] on the very first pass'},
+        note:'The <code>loop:</code> label marks the top of the repeating block — a bookmark that <code>bgtz $s1, loop</code> at the bottom will jump back to. <code>lw</code> = "load word," the opposite of <code>sw</code>: it reads memory into a register instead of writing a register into memory. <code>0($s0)</code> is again "the address in $s0, offset 0" — on the first pass through the loop, $s0 still points at <code>fibs[0]</code> (value 1), so this loads that 1 into <code>$s3</code>.'},
       {n:28, code:'      lw   $s4, 4($s0)      # Get value from array F[n-1]', type:'instr', section:'Loop',
-        note:'Loads <code>fibs[n-1]</code>, one word ahead, into <code>$s4</code>.'},
+        hints:{'$s0':'still points at fibs[n-2]; +4 bytes lands on fibs[n-1]'},
+        note:'Same load, but from <code>4($s0)</code> — one word ahead, i.e. <code>fibs[1]</code> (also 1, on the first pass). That value goes into <code>$s4</code>. So after these two lines, <code>$s3</code> and <code>$s4</code> hold the two most recently computed Fibonacci numbers.'},
       {n:29, code:'      add  $s2, $s3, $s4    # F[n] = F[n-1] + F[n-2]', type:'instr', section:'Loop',
-        note:'Adds the two previous numbers together: <code>$s2 = $s3 + $s4</code> — the next Fibonacci number.'},
+        hints:{'$s3':'just loaded — the older of the two previous Fibonacci numbers, F[n-2]', '$s4':'just loaded — the more recent of the two previous numbers, F[n-1]'},
+        note:'Adds the two registers together — <code>$s2 = $s3 + $s4</code> — reusing $s2, which no longer needs its old seed value. On the first pass this is <code>1 + 1 = 2</code>, the third Fibonacci number.'},
       {n:30, code:'      sw   $s2, 8($s0)      # Store newly computed F[n] in array', type:'instr', section:'Loop',
-        note:'Stores the newly computed number into <code>fibs[n]</code>, 8 bytes (two words) ahead of the current pointer.'},
+        hints:{'$s2':'just computed on the line above — the newly-found Fibonacci number, F[n]', '$s0':'+8 bytes from here lands on fibs[n], the next empty slot'},
+        note:'Writes the freshly computed value in <code>$s2</code> back to memory at <code>8($s0)</code> — two words (8 bytes) past where $s0 currently points, i.e. <code>fibs[2]</code> on the first pass. The array is now <code>[1, 1, 2, 0, ...]</code>.'},
       {n:31, code:'      addi $s0, $s0, 4      # increment address to now-known Fib. number storage', type:'instr', section:'Loop',
-        note:'Advances the array pointer <code>$s0</code> forward by one word, so the next iteration looks at the next three consecutive slots.'},
+        hints:{'$s0':'the array pointer — this moves it one word forward each pass through the loop'},
+        note:'Advances the pointer: <code>$s0 = $s0 + 4</code>, moving it forward one word. This is what makes the three offsets above (0, 4, 8) always line up with the correct three slots — n-2, n-1, and n — on every pass, even though the literal offsets in the code never change.'},
       {n:32, code:'      addi $s1, $s1, -1     # decrement loop counter', type:'instr', section:'Loop',
-        note:'Decrements the loop counter <code>$s1</code> by 1.'},
+        hints:{'$s1':'the loop countdown counter, started at 17 back on line 24'},
+        note:'<code>$s1 = $s1 - 1</code>. Recall $s1 started at 17 (line 24) — this ticks the countdown toward zero, one less number left to compute.'},
       {n:33, code:'      bgtz $s1, loop        # repeat while not finished', type:'instr', section:'Loop',
-        note:'<code>bgtz</code> = "branch if greater than zero." If the counter is still positive, jump back to <code>loop</code>; otherwise fall through — the array is complete.'},
+        hints:{'$s1':'the loop countdown counter — branches back while it\'s still above 0'},
+        note:'<code>bgtz</code> = "branch if greater than zero" — if <code>$s1</code> is still above 0, jump back up to the <code>loop:</code> label and run the body again with the pointer and counter in their new positions. Once <code>$s1</code> hits 0, execution just falls through to the next line instead — the array is complete.'},
       {n:34, code:'      ', type:'blank'},
       {n:35, code:'      # Fibonacci numbers are computed and stored in array. Print them.', type:'comment', section:'Call print'},
       {n:36, code:'      la   $a0, fibs        # first argument for print (array)', type:'instr', section:'Call print',
         note:'Loads the <i>starting</i> address of the array (not the pointer <code>$s0</code>, which has since moved) into <code>$a0</code> — the print subroutine\'s first argument.'},
       {n:37, code:'      add  $a1, $zero, $s5  # second argument for print (size)', type:'instr', section:'Call print',
+        hints:{'$s5':'still holds 19, the array size loaded on line 9'},
         note:'Copies the array size from <code>$s5</code> into <code>$a1</code>, the second argument. Adding zero is a common MIPS idiom for "move register to register," since there\'s no dedicated <code>mov</code>.'},
       {n:38, code:'      jal  print            # call print routine. ', type:'instr', section:'Call print',
         note:'<code>jal</code> = "jump and link." Jumps to the <code>print</code> label and saves the return address into <code>$ra</code>, so the subroutine knows how to get back here.'},
@@ -526,9 +595,11 @@ const FILES = {
       {n:49, code:'      .text', type:'directive', section:'Print header',
         note:'Switches back to the text segment for the rest of the subroutine\'s instructions.'},
       {n:50, code:'print:add  $t0, $zero, $a0  # starting address of array of data to be printed', type:'label', section:'Print header',
-        note:'The <code>print:</code> label is the subroutine\'s entry point — where <code>jal</code> jumped to. Copies the array address (passed in <code>$a0</code>) into <code>$t0</code>, a "temporary" register that will be this loop\'s moving pointer.'},
+        hints:{'$a0':'holds the array\'s starting address, passed in by the caller on line 36'},
+        note:'The <code>print:</code> label is the subroutine\'s entry point — where <code>jal print</code> (back on line 38) jumped to. At that call, <code>$a0</code> held the array\'s starting address and <code>$a1</code> held its size (19). This line copies $a0\'s address into <code>$t0</code>: "temporary" registers ($t0–$t9) are for short-lived values used only within one routine, unlike the $s0–$s7 "saved" registers used in main. $t0 will now serve the same job $s0 did earlier — a pointer that walks along the array — but $a0 itself is about to get reused for something else (line 52), so the address is copied here first.'},
       {n:51, code:'      add  $t1, $zero, $a1  # initialize loop counter to array size', type:'instr', section:'Print header',
-        note:'Copies the count (passed in <code>$a1</code>) into <code>$t1</code>, which will serve as this loop\'s countdown counter.'},
+        hints:{'$a1':'holds the array size, 19, passed in by the caller on line 37'},
+        note:'Same idea for the count: copies 19 from <code>$a1</code> into <code>$t1</code>, which will count down as each number gets printed — the print-loop equivalent of $s1 in the earlier computation loop.'},
       {n:52, code:'      la   $a0, head        # load address of the print heading string', type:'instr', section:'Print header',
         note:'Loads the address of the heading string into <code>$a0</code>, reusing the register since the array address is no longer needed there.'},
       {n:53, code:'      li   $v0, 4           # specify Print String service', type:'instr', section:'Print header',
@@ -537,7 +608,8 @@ const FILES = {
         note:'Prints "The Fibonacci numbers are:" to the console.'},
       {n:55, code:'      ', type:'blank'},
       {n:56, code:'out:  lw   $a0, 0($t0)      # load the integer to be printed (the current Fib. number)', type:'label', section:'Print loop',
-        note:'Top of the print loop. Loads the current Fibonacci number, pointed at by <code>$t0</code>, into <code>$a0</code> — the argument for the next syscall.'},
+        hints:{'$t0':'the print loop\'s pointer — at fibs[0] on the first pass'},
+        note:'Top of the print loop, marked by the <code>out:</code> label. <code>0($t0)</code> means "the address in $t0, offset 0" — on the first pass, $t0 still points at <code>fibs[0]</code>, so this reads that value (1) from memory into <code>$a0</code>, setting up the argument for the print-integer syscall two lines below.'},
       {n:57, code:'      li   $v0, 1           # specify Print Integer service', type:'instr', section:'Print loop',
         note:'Loads syscall 1, "print integer" — different from syscall 4, which prints strings.'},
       {n:58, code:'      syscall               # print fibonacci number', type:'instr', section:'Print loop',
@@ -551,11 +623,14 @@ const FILES = {
         note:'Prints the space separator after the number.'},
       {n:63, code:'      ', type:'blank'},
       {n:64, code:'      addi $t0, $t0, 4      # increment address of data to be printed', type:'instr', section:'Print loop',
-        note:'Advances the array pointer to the next word, 4 bytes ahead.'},
+        hints:{'$t0':'the print loop\'s pointer, advancing one word each pass'},
+        note:'<code>$t0 = $t0 + 4</code>: moves the pointer forward one word, from <code>fibs[0]</code> to <code>fibs[1]</code>, then <code>fibs[2]</code>, and so on each time around — the same trick as $s0 in the computation loop.'},
       {n:65, code:'      addi $t1, $t1, -1     # decrement loop counter', type:'instr', section:'Print loop',
-        note:'Decrements the print loop\'s counter.'},
+        hints:{'$t1':'the print loop\'s countdown counter, started at 19 on line 51'},
+        note:'<code>$t1 = $t1 - 1</code>. $t1 started at 19 (line 51), so this ticks the count of remaining numbers to print down toward 0.'},
       {n:66, code:'      bgtz $t1, out         # repeat while not finished', type:'instr', section:'Print loop',
-        note:'If numbers remain to print, branch back to <code>out</code>; otherwise fall through and finish up.'},
+        hints:{'$t1':'the print loop\'s countdown counter'},
+        note:'If <code>$t1</code> is still greater than 0, jump back to <code>out:</code> and print the next number; once it reaches 0, every element has been printed and execution falls through to the return below.'},
       {n:67, code:'      ', type:'blank'},
       {n:68, code:'      jr   $ra              # return from subroutine', type:'instr', section:'Return',
         note:'<code>jr</code> = "jump register." Returns control to whatever instruction follows the original <code>jal print</code> call, using the return address <code>jal</code> saved in <code>$ra</code>.'},
@@ -569,6 +644,168 @@ const FILES = {
 
 let currentFile = 'hello';
 let currentIndex = -1;
+
+// ---- Glossaries used to explain every individual piece of a line ----
+const REGISTERS = {
+  '$zero': 'hardwired to the constant 0 — writing to it does nothing, reading it always gives 0',
+  '$a0': 'argument register 0 — the first value passed into a syscall or subroutine',
+  '$a1': 'argument register 1 — the second value passed in',
+  '$a2': 'argument register 2 — the third value passed in',
+  '$a3': 'argument register 3 — the fourth value passed in',
+  '$v0': 'value register 0 — holds the syscall service number going in, or a return value coming back',
+  '$v1': 'value register 1 — a second return-value slot',
+  '$ra': 'the return-address register — set automatically by jal, read by jr to return',
+  '$t0':'temporary register 0','$t1':'temporary register 1','$t2':'temporary register 2',
+  '$t3':'temporary register 3','$t4':'temporary register 4','$t5':'temporary register 5',
+  '$t6':'temporary register 6','$t7':'temporary register 7','$t8':'temporary register 8','$t9':'temporary register 9',
+  '$s0':'saved register 0','$s1':'saved register 1','$s2':'saved register 2','$s3':'saved register 3',
+  '$s4':'saved register 4','$s5':'saved register 5','$s6':'saved register 6','$s7':'saved register 7',
+};
+function describeRegister(reg){
+  if(REGISTERS[reg]) return REGISTERS[reg] + (/^\$t\d$/.test(reg) ? ' — a short-lived scratch value, not expected to survive a subroutine call' : (/^\$s\d$/.test(reg) ? ' — meant to keep its value across a whole subroutine or loop' : ''));
+  if(/^\$s\d+$/.test(reg)) return 'a saved register — meant to keep its value across a whole subroutine or loop';
+  if(/^\$t\d+$/.test(reg)) return 'a temporary register — a short-lived scratch value';
+  if(/^\$a\d+$/.test(reg)) return 'an argument register — used to pass a value into a syscall or subroutine';
+  if(/^\$v\d+$/.test(reg)) return 'a value register — syscall codes go in here, return values come out here';
+  return 'a CPU register';
+}
+const INSTR = {
+  la: 'load address — copies the memory address of a label into a register (the address of it, not the data itself)',
+  li: 'load immediate — copies a literal constant number directly into a register',
+  lw: 'load word — reads 4 bytes from memory into a register',
+  sw: 'store word — writes a register\'s value out to memory',
+  add: 'add — adds two registers together and stores the sum in a third register',
+  addi: 'add immediate — adds a register and a literal constant, storing the result',
+  bgt: 'branch if greater than — jumps to a label if the first register is greater than the second',
+  blt: 'branch if less than — jumps to a label if the first register is less than the second',
+  bgtz: 'branch if greater than zero — jumps to a label if the register holds a value above 0',
+  jal: 'jump and link — jumps to a subroutine and saves the return address in $ra so it can come back',
+  jr: 'jump register — jumps to whatever address is held in a register (used to return from a subroutine)',
+  syscall: 'triggers a system call — the OS/simulator looks at $v0 (and often $a0) to decide what service to run',
+};
+const DIRECTIVES = {
+  '.data': 'directive — marks the start of the data segment (variables and constants, not instructions)',
+  '.text': 'directive — marks the start of the text segment (the actual instructions)',
+  '.globl': 'directive — declares the following label as globally visible, typically the entry point',
+  '.word': 'directive — reserves one or more 4-byte memory words, optionally with initial values',
+  '.asciiz': 'directive — stores a null-terminated ASCII string in memory',
+};
+const SYSCALL_CODES = {'1':'print integer', '4':'print string', '5':'read integer', '10':'exit'};
+const LABELS = {
+  hello: {
+    msg: 'the string "Hello, MIPS" declared on line 4',
+    main: 'this program\'s entry point, defined on line 8',
+  },
+  fib: {
+    fibs: 'the 19-word array declared on line 3',
+    size: 'the word holding the array size, 19, declared on line 4',
+    prompt: 'the input-prompt string declared on line 5 (unused, since the input routine below it is disabled)',
+    loop: 'the top of the Fibonacci-computation loop, defined on line 27',
+    print: 'the print-subroutine entry point, defined on line 50',
+    pr: 'a re-prompt label for the disabled input routine — never actually defined, since that code is commented out',
+    out: 'the top of the print loop, defined on line 56',
+    space: 'the single-space separator string declared on line 47',
+    head: 'the heading string declared on line 48',
+  }
+};
+
+function splitOperands(s){
+  return s.split(',').map(x=>x.trim()).filter(Boolean);
+}
+
+function describeDirectiveArgs(mnem, args){
+  if(mnem === '.word'){
+    const m = args.match(/^(-?\d+)\s*:\s*(\d+)$/);
+    if(m) return `Reserves ${m[2]} words (4 bytes each) in memory, every one initialized to ${m[1]}.`;
+    return `Reserves one word (4 bytes) in memory, initialized to ${args}.`;
+  }
+  if(mnem === '.asciiz'){
+    const display = args.replace(/\\n/g, '⏎').replace(/^"|"$/g, '');
+    return `A null-terminated string: "${display}". Stored as raw ASCII bytes with an extra zero byte at the end marking where it stops — the same convention as a C string.`;
+  }
+  return '';
+}
+
+function describeOperand(fileKey, op, mnemonic, allOps, hints){
+  hints = hints || {};
+  const offMatch = op.match(/^(-?\d+)\((\$[a-zA-Z0-9]+)\)$/);
+  if(offMatch){
+    const offset = offMatch[1], reg = offMatch[2];
+    const hint = hints[op] || hints[reg];
+    const extra = hint ? ` — ${hint}` : '';
+    return `Memory address = the value in <code>${reg}</code> plus ${offset} bytes${extra}. <code>${reg}</code> is ${describeRegister(reg)}.`;
+  }
+  if(/^\$[a-zA-Z0-9]+$/.test(op)){
+    const hint = hints[op];
+    const extra = hint ? ` — ${hint}` : '';
+    return `${describeRegister(op)}${extra}.`;
+  }
+  if(/^-?\d+$/.test(op)){
+    let base = `The literal number ${op}.`;
+    if(mnemonic && mnemonic.toLowerCase()==='li' && allOps[0]==='$v0' && SYSCALL_CODES[op]){
+      base += ` As a value loaded into $v0, this is the syscall service code for "${SYSCALL_CODES[op]}."`;
+    }
+    return base;
+  }
+  const labelDesc = (LABELS[fileKey] && LABELS[fileKey][op]);
+  return labelDesc ? `A label reference — ${labelDesc}.` : `A label reference elsewhere in the program.`;
+}
+
+function describeLabelDef(fileKey, name){
+  const extra = (LABELS[fileKey] && LABELS[fileKey][name]) ? ` Specifically, this is ${LABELS[fileKey][name]}.` : '';
+  return `Defines the label <code>${name}</code> — a name for this exact spot in memory, so other instructions can reference it (with a branch, jump, or jal) without hardcoding an address.${extra}`;
+}
+
+function tokenizeLine(fileKey, line){
+  if(line.type === 'blank') return [];
+  if(line.type === 'comment'){
+    const text = line.code.trim();
+    return [{text: text || '(comment)', kind:'comment-line',
+      desc: 'This entire line is a comment — everything on it is ignored by the assembler. It exists only to explain intent to a human reader.'}];
+  }
+  const code = line.code;
+  let commentIdx = code.indexOf('#');
+  let commentText = null, codeNoComment = code;
+  if(commentIdx !== -1){
+    commentText = code.slice(commentIdx);
+    codeNoComment = code.slice(0, commentIdx);
+  }
+  codeNoComment = codeNoComment.trim();
+
+  const tokens = [];
+  let rest = codeNoComment;
+  const labelMatch = codeNoComment.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*/);
+  if(labelMatch){
+    tokens.push({text: labelMatch[1]+':', kind:'label-def', desc: describeLabelDef(fileKey, labelMatch[1])});
+    rest = codeNoComment.slice(labelMatch[0].length);
+  }
+  if(rest){
+    const m = rest.match(/^(\S+)\s*(.*)$/);
+    if(m){
+      const mnem = m[1];
+      const operandsStr = m[2].trim();
+      if(mnem.startsWith('.')){
+        tokens.push({text: mnem, kind:'directive', desc: DIRECTIVES[mnem] || 'An assembler directive.'});
+        if(operandsStr){
+          const d = describeDirectiveArgs(mnem, operandsStr) || describeOperand(fileKey, operandsStr, mnem, [operandsStr], line.hints);
+          tokens.push({text: operandsStr, kind:'operand', desc: d});
+        }
+      } else {
+        tokens.push({text: mnem, kind:'mnemonic', desc: INSTR[mnem.toLowerCase()] || 'An instruction.'});
+        if(operandsStr){
+          const ops = splitOperands(operandsStr);
+          ops.forEach(op=>{
+            tokens.push({text: op, kind:'operand', desc: describeOperand(fileKey, op, mnem, ops, line.hints)});
+          });
+        }
+      }
+    }
+  }
+  if(commentText){
+    tokens.push({text: commentText, kind:'comment', desc: 'A trailing comment — ignored by the assembler; explains intent for human readers.'});
+  }
+  return tokens;
+}
 
 function classify(line){
   if(line.type==='blank') return '';
@@ -623,6 +860,8 @@ function showIntro(){
   document.getElementById('note-linelabel').textContent = 'LINE —';
   document.getElementById('note-section').textContent = '—';
   document.getElementById('note-code').textContent = 'Select a line to begin.';
+  document.getElementById('note-breakdown').innerHTML = '';
+  document.getElementById('note-summary-label').style.display = 'none';
   document.getElementById('note-body').textContent = 'Click any line on the left, or use Next to start at the top of the file.';
   updateNavButtons();
 }
@@ -645,7 +884,19 @@ function selectLine(i){
   document.getElementById('note-linelabel').textContent = 'LINE ' + line.n;
   document.getElementById('note-section').textContent = line.section || '';
   document.getElementById('note-code').textContent = line.code.trim().length ? line.code : '(blank line)';
-  document.getElementById('note-body').innerHTML = line.note || 'No annotation for this line.';
+
+  const tokens = tokenizeLine(currentFile, line);
+  const breakdownEl = document.getElementById('note-breakdown');
+  const summaryLabel = document.getElementById('note-summary-label');
+  if(tokens.length){
+    breakdownEl.innerHTML = tokens.map(t=>
+      `<div class="tok-row"><code class="tok-chip k-${t.kind}">${escapeHtml(t.text)}</code><span class="tok-desc">${t.desc}</span></div>`
+    ).join('');
+  } else {
+    breakdownEl.innerHTML = '<div class="tok-desc">A blank line — it has no code, and exists only to visually separate sections of the file.</div>';
+  }
+  summaryLabel.style.display = line.note ? 'block' : 'none';
+  document.getElementById('note-body').innerHTML = line.note || '';
   updateNavButtons();
 }
 
