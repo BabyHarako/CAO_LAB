@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIPS Field Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0E2740;
+    --bg-deep: #0A1D33;
+    --panel: #143654;
+    --panel-2: #10304C;
+    --grid: rgba(230,240,250,0.055);
+    --grid-strong: rgba(230,240,250,0.11);
+    --ink: #E8EEF5;
+    --ink-dim: #9FB7CC;
+    --ink-faint: #6F8AA3;
+    --copper: #C98A4B;
+    --copper-dim: rgba(201,138,75,0.16);
+    --teal: #5FC4BB;
+    --amber: #E3B341;
+    --sky: #7EC1E8;
+    --comment: #6F8AA3;
+    --divider: #2C517A;
+    --danger: #D97B6C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+  }
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 36px 20px 60px;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap: 24px;
+    border-bottom: 1px solid var(--divider);
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .title-block h1{
+    font-family:'IBM Plex Sans Condensed', sans-serif;
+    font-weight:700;
+    font-size: 2.1rem;
+    letter-spacing: 0.01em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .title-block h1 span{ color: var(--copper); }
+  .title-block p{
+    margin:0;
+    color: var(--ink-dim);
+    font-size: 0.95rem;
+    max-width: 46ch;
+  }
+  .coord{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    text-align:right;
+    line-height:1.6;
+  }
+
+  .filebar{
+    display:flex;
+    gap:10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items:center;
+  }
+  .filebar-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    color: var(--ink-faint);
+    margin-right: 4px;
+  }
+  .file-tab{
+    font-family:'IBM Plex Mono', monospace;
+    background: var(--panel-2);
+    border: 1px solid var(--divider);
+    color: var(--ink-dim);
+    padding: 9px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .file-tab:hover{ color: var(--ink); border-color: var(--sky); }
+  .file-tab.active{
+    background: var(--copper-dim);
+    border-color: var(--copper);
+    color: var(--ink);
+  }
+  .file-tagline{
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+    font-style: italic;
+    margin-left: auto;
+  }
+
+  .stage{
+    display:grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 880px){
+    .stage{ grid-template-columns: 1fr; }
+  }
+
+  .code-panel{
+    background: var(--panel);
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .code-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--divider);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+  }
+  .code-panel-head .dots{ display:flex; gap:6px; }
+  .code-panel-head .dots span{
+    width:8px;height:8px;border-radius:50%;
+    background: var(--divider);
+    display:inline-block;
+  }
+  .code-scroll{
+    max-height: 620px;
+    overflow-y: auto;
+  }
+  .code-line{
+    display:flex;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.86rem;
+    line-height: 1.9;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    white-space: pre;
+  }
+  .code-line:hover{ background: rgba(126,193,232,0.06); }
+  .code-line.active{
+    background: var(--copper-dim);
+    border-left: 3px solid var(--copper);
+  }
+  .code-line.blank{ cursor: default; }
+  .code-line.blank:hover{ background: transparent; }
+  .ln{
+    width: 42px;
+    flex-shrink:0;
+    text-align:right;
+    padding-right: 14px;
+    color: var(--ink-faint);
+    user-select:none;
+  }
+  .code-line.active .ln{ color: var(--copper); }
+  .code-text{ white-space: pre; }
+  .tok-comment{ color: var(--comment); }
+  .tok-directive{ color: var(--teal); }
+  .tok-label{ color: var(--amber); }
+  .tok-instr{ color: var(--sky); }
+  .tok-plain{ color: var(--ink); }
+  .divider-line{
+    color: var(--ink-faint);
+    opacity: .55;
+  }
+
+  .note-panel{
+    background: var(--panel);
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 20px 22px;
+    min-height: 300px;
+    display:flex;
+    flex-direction:column;
+    position: sticky;
+    top: 20px;
+  }
+  .note-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+    display:flex;
+    justify-content:space-between;
+    margin-bottom: 12px;
+  }
+  .note-tag .section{ color: var(--copper); }
+  .note-line-code{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.92rem;
+    background: var(--panel-2);
+    border: 1px solid var(--divider);
+    border-radius: 3px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .note-body{
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: var(--ink);
+    flex-grow:1;
+  }
+  .note-body code{
+    font-family:'IBM Plex Mono', monospace;
+    background: var(--panel-2);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 0.9em;
+    color: var(--sky);
+  }
+  .note-nav{
+    display:flex;
+    justify-content:space-between;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--divider);
+  }
+  .nav-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    background: var(--panel-2);
+    border: 1px solid var(--divider);
+    color: var(--ink-dim);
+    padding: 8px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    flex:1;
+  }
+  .nav-btn:hover:not(:disabled){ border-color: var(--sky); color: var(--ink); }
+  .nav-btn:disabled{ opacity: 0.35; cursor: default; }
+
+  .legend{
+    margin-top: 22px;
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    background: var(--panel);
+    overflow:hidden;
+  }
+  .legend-head{
+    padding: 12px 18px;
+    cursor: pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+  }
+  .legend-head:hover{ color: var(--ink); }
+  .legend-body{
+    display:none;
+    padding: 4px 18px 18px;
+    border-top: 1px solid var(--divider);
+  }
+  .legend.open .legend-body{ display:block; }
+  .legend.open .chevron{ transform: rotate(90deg); }
+  .chevron{ transition: transform .15s ease; color: var(--copper); }
+  .legend-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px 24px;
+    margin-top: 14px;
+  }
+  .legend-col h4{
+    font-family:'IBM Plex Sans Condensed', sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--copper);
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .legend-col dl{ margin:0; font-size: 0.84rem; color: var(--ink-dim); }
+  .legend-col dt{
+    font-family:'IBM Plex Mono', monospace;
+    color: var(--sky);
+    float:left;
+    clear:left;
+    width: 78px;
+  }
+  .legend-col dd{ margin: 0 0 6px 78px; }
+
+  ::-webkit-scrollbar{ width: 9px; }
+  ::-webkit-scrollbar-track{ background: var(--panel-2); }
+  ::-webkit-scrollbar-thumb{ background: var(--divider); border-radius: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>MIPS Field <span>Notes</span></h1>
+      <p>Click any line of assembly to see what it does, register by register, syscall by syscall.</p>
+    </div>
+    <div class="coord">
+      ARCH: MIPS32 · SPIM/MARS syscall convention<br>
+      MODE: line-by-line annotation
+    </div>
+  </header>
+
+  <div class="filebar">
+    <span class="filebar-label">FILE —</span>
+    <button class="file-tab active" data-file="hello">hello.asm</button>
+    <button class="file-tab" data-file="fib">Fibonacci.asm</button>
+    <span class="file-tagline" id="tagline"></span>
+  </div>
+
+  <div class="stage">
+    <div class="code-panel">
+      <div class="code-panel-head">
+        <span id="panel-filename">hello.asm</span>
+        <div class="dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="code-scroll" id="code-scroll"></div>
+    </div>
+
+    <div class="note-panel">
+      <div class="note-tag">
+        <span id="note-linelabel">LINE —</span>
+        <span class="section" id="note-section">—</span>
+      </div>
+      <div class="note-line-code" id="note-code">Select a line to begin.</div>
+      <div class="note-body" id="note-body">Click any line on the left, or use Next to start at the top of the file.</div>
+      <div class="note-nav">
+        <button class="nav-btn" id="prev-btn">◂ prev</button>
+        <button class="nav-btn" id="next-btn">next ▸</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend">
+    <div class="legend-head" id="legend-toggle">
+      <span><span class="chevron">▸</span>&nbsp;&nbsp;Register &amp; syscall cheat-sheet</span>
+      <span>MIPS / SPIM conventions</span>
+    </div>
+    <div class="legend-body">
+      <div class="legend-grid">
+        <div class="legend-col">
+          <h4>Registers</h4>
+          <dl>
+            <dt>$zero</dt><dd>hardwired to the constant 0</dd>
+            <dt>$a0–$a3</dt><dd>arguments passed into a syscall or subroutine</dd>
+            <dt>$v0</dt><dd>syscall service number going in; a return value coming out</dd>
+            <dt>$t0–$t9</dt><dd>temporary values, not preserved across calls</dd>
+            <dt>$s0–$s7</dt><dd>saved values, meant to persist across a subroutine call</dd>
+            <dt>$ra</dt><dd>return address, set automatically by <code>jal</code></dd>
+          </dl>
+        </div>
+        <div class="legend-col">
+          <h4>Syscall codes (in $v0)</h4>
+          <dl>
+            <dt>1</dt><dd>print the integer in $a0</dd>
+            <dt>4</dt><dd>print the null-terminated string at the address in $a0</dd>
+            <dt>5</dt><dd>read an integer from input into $v0</dd>
+            <dt>10</dt><dd>exit the program</dd>
+          </dl>
+        </div>
+        <div class="legend-col">
+          <h4>Instructions used here</h4>
+          <dl>
+            <dt>la</dt><dd>load address of a label</dd>
+            <dt>li</dt><dd>load an immediate (literal) constant</dd>
+            <dt>lw / sw</dt><dd>load / store a word to memory</dd>
+            <dt>add / addi</dt><dd>add two registers / add a constant</dd>
+            <dt>bgtz / bgt / blt</dt><dd>branch if greater-than-zero / greater-than / less-than</dd>
+            <dt>jal / jr</dt><dd>call a subroutine / return from one</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const FILES = {
+  hello: {
+    filename: 'hello.asm',
+    tagline: 'The smallest complete MIPS program: print a string, then exit.',
+    lines: [
+      {n:1, code:'# Program name: Hello.asm print "Hello, MIPS"', type:'comment', section:'Header',
+        note:'A header comment. Everything after <code>#</code> is ignored by the assembler — it only exists so a human reader knows what this file does.'},
+      {n:2, code:'', type:'blank'},
+      {n:3, code:'\t.data\t\t\t# the data segment', type:'directive', section:'Data segment',
+        note:'Marks the start of the <b>data segment</b> — the region of memory for the program\'s variables and constants, separate from its instructions.'},
+      {n:4, code:'msg:\t.asciiz "Hello, MIPS\\n"\t# a null terminated string', type:'label', section:'Data segment',
+        note:'Defines a label <code>msg</code> pointing at a string. <code>.asciiz</code> stores the text as ASCII bytes followed by a null terminator (like a C string). <code>\\n</code> is a newline character.'},
+      {n:5, code:'', type:'blank'},
+      {n:6, code:'\t.text\t\t\t#the code segment', type:'directive', section:'Text segment',
+        note:'Marks the start of the <b>text segment</b>, where the program\'s actual instructions live.'},
+      {n:7, code:'\t.globl main', type:'directive', section:'Text segment',
+        note:'Declares <code>main</code> as a global symbol — this tells the assembler/linker that the label is the program\'s entry point and can be referenced from elsewhere.'},
+      {n:8, code:'main:', type:'label', section:'Text segment',
+        note:'A label marking the address where execution begins. Labels generate no machine code themselves; they just name a location for other instructions to reference.'},
+      {n:9, code:'\tla $a0, msg\t\t#load the argument string', type:'instr', section:'Print',
+        note:'<code>la</code> = "load address." Copies the memory address of <code>msg</code> into <code>$a0</code>. By convention, <code>$a0</code>–<code>$a3</code> hold arguments for a syscall — here, the string to print.'},
+      {n:10, code:'\tli $v0, 4\t\t#load the system call (print)', type:'instr', section:'Print',
+        note:'<code>li</code> = "load immediate." Puts the constant 4 into <code>$v0</code>, which holds the <b>syscall service number</b>. 4 means "print the null-terminated string whose address is in $a0."'},
+      {n:11, code:'\tsyscall\t\t\t# print the string', type:'instr', section:'Print',
+        note:'Traps into the operating system (or the SPIM/MARS simulator), which reads <code>$v0</code> and <code>$a0</code> and performs the requested service — printing "Hello, MIPS" to the console.'},
+      {n:12, code:'\tli $v0, 10\t\t# exit to OS', type:'instr', section:'Exit',
+        note:'Loads syscall code 10 into <code>$v0</code> — the "exit" service, which will cleanly terminate the program.'},
+      {n:13, code:'\tsyscall', type:'instr', section:'Exit',
+        note:'Executes the exit syscall requested above, ending the program.'},
+    ]
+  },
+  fib: {
+    filename: 'Fibonacci.asm',
+    tagline: 'Builds a Fibonacci sequence into an array with a loop, then prints it via a subroutine.',
+    lines: [
+      {n:1, code:'# Compute several Fibonacci numbers and put in array, then print', type:'comment', section:'Header',
+        note:'Header comment describing the program: compute a run of Fibonacci numbers into an array, then print them.'},
+      {n:2, code:'.data', type:'directive', section:'Data segment',
+        note:'Starts the data segment, where the arrays and strings below are declared.'},
+      {n:3, code:'fibs:.word   0 : 19         # "array" of words to contain fib values', type:'label', section:'Data segment',
+        note:'Declares an array <code>fibs</code> of 19 words, each initialized to 0. This is where computed Fibonacci numbers get stored. <code>value : count</code> is SPIM/MARS shorthand for "repeat this value <i>count</i> times."'},
+      {n:4, code:'size: .word  19             # size of "array" (agrees with array declaration)', type:'label', section:'Data segment',
+        note:'A single word variable <code>size</code> holding 19 — how many Fibonacci numbers the array holds. Used later so the loop and print routine know when to stop.'},
+      {n:5, code:'prompt: .asciiz "How many Fibonacci numbers to generate? (2 <= x <= 19)"', type:'label', section:'Data segment',
+        note:'A prompt string used by the optional (currently disabled) user-input routine below.'},
+      {n:6, code:'.text', type:'directive', section:'Setup',
+        note:'Starts the text segment — the program\'s instructions begin here.'},
+      {n:7, code:'      la   $s0, fibs        # load address of array', type:'instr', section:'Setup',
+        note:'Loads the base address of the <code>fibs</code> array into <code>$s0</code>. <code>$s0</code>–<code>$s7</code> are "saved" registers used for values that persist across the loop; here <code>$s0</code> acts as a moving pointer into the array.'},
+      {n:8, code:'      la   $s5, size        # load address of size variable', type:'instr', section:'Setup',
+        note:'Loads the <i>address</i> of <code>size</code> into <code>$s5</code> — not its value yet, just where to find it.'},
+      {n:9, code:'      lw   $s5, 0($s5)      # load array size', type:'instr', section:'Setup',
+        note:'<code>lw</code> = "load word." Reads the value stored at address <code>$s5</code>, dereferencing the pointer from the previous line, and overwrites <code>$s5</code> with the actual size, 19.'},
+      {n:10, code:'', type:'blank'},
+      {n:11, code:'# Optional: user inputs the number of Fibonacci numbers to generate', type:'comment', section:'Disabled input',
+        note:'Introduces an optional feature: letting the user type in how many numbers to generate instead of hardcoding 19. None of the lines below actually run.'},
+      {n:12, code:'#pr:   la   $a0, prompt      # load address of prompt for syscall', type:'comment', section:'Disabled input',
+        note:'Commented out (starts with <code>#</code>), so it never executes. If enabled, this would load the prompt string\'s address to print it.'},
+      {n:13, code:'#      li   $v0, 4           # specify Print String service', type:'comment', section:'Disabled input',
+        note:'Would load syscall 4 (print string) — part of the disabled input routine.'},
+      {n:14, code:'#      syscall               # print the prompt string', type:'comment', section:'Disabled input',
+        note:'Would print the prompt asking the user for a count.'},
+      {n:15, code:'#      li   $v0, ?????Replace_this_dummy_with_the_correct_numeric_value???????           # specify Read Integer service', type:'comment', section:'Disabled input',
+        note:'A placeholder left as an exercise — the syscall code for "read integer" (5 in SPIM/MARS) is deliberately missing here for the student to fill in.'},
+      {n:16, code:'#      syscall               # Read the number. After this instruction, the number read is in $v0.', type:'comment', section:'Disabled input',
+        note:'Would read the user\'s typed integer into <code>$v0</code>.'},
+      {n:17, code:'#      bgt  $v0, $s5, pr     # Check boundary on user input -- if invalid, restart', type:'comment', section:'Disabled input',
+        note:'Would branch back to <code>pr</code> (re-prompt) if the entered number is greater than the array size — input validation.'},
+      {n:18, code:'#      blt  $v0, $zero, pr   # Check boundary on user input -- if invalid, restart', type:'comment', section:'Disabled input',
+        note:'Would branch back to <code>pr</code> if the entered number is negative. <code>$zero</code> is a hardwired register that always reads as 0.'},
+      {n:19, code:'#      add  $s5, $v0, $zero  # transfer the number to the desired register', type:'comment', section:'Disabled input',
+        note:'Would copy the validated user input from <code>$v0</code> into <code>$s5</code>, replacing the hardcoded size of 19.'},
+      {n:20, code:'      ', type:'blank'},
+      {n:21, code:'      li   $s2, 1           # 1 is the known value of first and second Fib. number', type:'instr', section:'Seed values',
+        note:'Loads the constant 1 into <code>$s2</code> — both F(0) and F(1) in this sequence start at 1.'},
+      {n:22, code:'      sw   $s2, 0($s0)      # F[0] = 1', type:'instr', section:'Seed values',
+        note:'<code>sw</code> = "store word." Writes the value in <code>$s2</code> into <code>fibs[0]</code>, the first slot pointed to by <code>$s0</code>.'},
+      {n:23, code:'      sw   $s2, 4($s0)      # F[1] = F[0] = 1', type:'instr', section:'Seed values',
+        note:'Writes the same value into <code>fibs[1]</code>, 4 bytes after <code>fibs[0]</code> (each word is 4 bytes) — seeding the sequence with its first two numbers.'},
+      {n:24, code:'      addi $s1, $s5, -2     # Counter for loop, will execute (size-2) times', type:'instr', section:'Seed values',
+        note:'<code>addi</code> = "add immediate." Computes <code>size - 2</code> into <code>$s1</code>, a countdown counter — since the first two numbers are already filled in, only <code>size - 2</code> more need computing.'},
+      {n:25, code:'      ', type:'blank'},
+      {n:26, code:'      # Loop to compute each Fibonacci number using the previous two Fib. numbers.', type:'comment', section:'Loop',
+        note:'Explains the loop\'s purpose: each new Fibonacci number is the sum of the previous two.'},
+      {n:27, code:'loop: lw   $s3, 0($s0)      # Get value from array F[n-2]', type:'label', section:'Loop',
+        note:'The <code>loop:</code> label marks the top of the repeating block. Loads <code>fibs[n-2]</code> — the slot <code>$s0</code> currently points at — into <code>$s3</code>.'},
+      {n:28, code:'      lw   $s4, 4($s0)      # Get value from array F[n-1]', type:'instr', section:'Loop',
+        note:'Loads <code>fibs[n-1]</code>, one word ahead, into <code>$s4</code>.'},
+      {n:29, code:'      add  $s2, $s3, $s4    # F[n] = F[n-1] + F[n-2]', type:'instr', section:'Loop',
+        note:'Adds the two previous numbers together: <code>$s2 = $s3 + $s4</code> — the next Fibonacci number.'},
+      {n:30, code:'      sw   $s2, 8($s0)      # Store newly computed F[n] in array', type:'instr', section:'Loop',
+        note:'Stores the newly computed number into <code>fibs[n]</code>, 8 bytes (two words) ahead of the current pointer.'},
+      {n:31, code:'      addi $s0, $s0, 4      # increment address to now-known Fib. number storage', type:'instr', section:'Loop',
+        note:'Advances the array pointer <code>$s0</code> forward by one word, so the next iteration looks at the next three consecutive slots.'},
+      {n:32, code:'      addi $s1, $s1, -1     # decrement loop counter', type:'instr', section:'Loop',
+        note:'Decrements the loop counter <code>$s1</code> by 1.'},
+      {n:33, code:'      bgtz $s1, loop        # repeat while not finished', type:'instr', section:'Loop',
+        note:'<code>bgtz</code> = "branch if greater than zero." If the counter is still positive, jump back to <code>loop</code>; otherwise fall through — the array is complete.'},
+      {n:34, code:'      ', type:'blank'},
+      {n:35, code:'      # Fibonacci numbers are computed and stored in array. Print them.', type:'comment', section:'Call print'},
+      {n:36, code:'      la   $a0, fibs        # first argument for print (array)', type:'instr', section:'Call print',
+        note:'Loads the <i>starting</i> address of the array (not the pointer <code>$s0</code>, which has since moved) into <code>$a0</code> — the print subroutine\'s first argument.'},
+      {n:37, code:'      add  $a1, $zero, $s5  # second argument for print (size)', type:'instr', section:'Call print',
+        note:'Copies the array size from <code>$s5</code> into <code>$a1</code>, the second argument. Adding zero is a common MIPS idiom for "move register to register," since there\'s no dedicated <code>mov</code>.'},
+      {n:38, code:'      jal  print            # call print routine. ', type:'instr', section:'Call print',
+        note:'<code>jal</code> = "jump and link." Jumps to the <code>print</code> label and saves the return address into <code>$ra</code>, so the subroutine knows how to get back here.'},
+      {n:39, code:'', type:'blank'},
+      {n:40, code:'      # The program is finished. Exit.', type:'comment', section:'Exit'},
+      {n:41, code:'      li   $v0, 10          # system call for exit', type:'instr', section:'Exit',
+        note:'Loads syscall 10 ("exit") into <code>$v0</code>.'},
+      {n:42, code:'      syscall               # Exit!', type:'instr', section:'Exit',
+        note:'Executes the exit syscall, ending the program once <code>print</code> returns.'},
+      {n:43, code:'      \t', type:'blank'},
+      {n:44, code:'###############################################################', type:'comment', section:'Subroutine',
+        note:'A visual divider comment separating the main program from the print subroutine below.'},
+      {n:45, code:'# Subroutine to print the numbers on one line.', type:'comment', section:'Subroutine',
+        note:'Describes the subroutine\'s job: print all the numbers on one line.'},
+      {n:46, code:'      .data', type:'directive', section:'Subroutine data',
+        note:'Re-opens the data segment to declare two more strings used only by the print routine — MIPS lets you interleave <code>.data</code>/<code>.text</code> sections; the assembler merges same-typed sections together.'},
+      {n:47, code:'space:.asciiz  " "          # space to insert between numbers', type:'label', section:'Subroutine data',
+        note:'A single-space string, printed between each number so they don\'t run together.'},
+      {n:48, code:'head: .asciiz  "The Fibonacci numbers are:\\n"', type:'label', section:'Subroutine data',
+        note:'The heading line printed once, before the numbers.'},
+      {n:49, code:'      .text', type:'directive', section:'Print header',
+        note:'Switches back to the text segment for the rest of the subroutine\'s instructions.'},
+      {n:50, code:'print:add  $t0, $zero, $a0  # starting address of array of data to be printed', type:'label', section:'Print header',
+        note:'The <code>print:</code> label is the subroutine\'s entry point — where <code>jal</code> jumped to. Copies the array address (passed in <code>$a0</code>) into <code>$t0</code>, a "temporary" register that will be this loop\'s moving pointer.'},
+      {n:51, code:'      add  $t1, $zero, $a1  # initialize loop counter to array size', type:'instr', section:'Print header',
+        note:'Copies the count (passed in <code>$a1</code>) into <code>$t1</code>, which will serve as this loop\'s countdown counter.'},
+      {n:52, code:'      la   $a0, head        # load address of the print heading string', type:'instr', section:'Print header',
+        note:'Loads the address of the heading string into <code>$a0</code>, reusing the register since the array address is no longer needed there.'},
+      {n:53, code:'      li   $v0, 4           # specify Print String service', type:'instr', section:'Print header',
+        note:'Loads syscall 4 (print string).'},
+      {n:54, code:'      syscall               # print the heading string', type:'instr', section:'Print header',
+        note:'Prints "The Fibonacci numbers are:" to the console.'},
+      {n:55, code:'      ', type:'blank'},
+      {n:56, code:'out:  lw   $a0, 0($t0)      # load the integer to be printed (the current Fib. number)', type:'label', section:'Print loop',
+        note:'Top of the print loop. Loads the current Fibonacci number, pointed at by <code>$t0</code>, into <code>$a0</code> — the argument for the next syscall.'},
+      {n:57, code:'      li   $v0, 1           # specify Print Integer service', type:'instr', section:'Print loop',
+        note:'Loads syscall 1, "print integer" — different from syscall 4, which prints strings.'},
+      {n:58, code:'      syscall               # print fibonacci number', type:'instr', section:'Print loop',
+        note:'Prints the current Fibonacci number as a decimal integer.'},
+      {n:59, code:'      ', type:'blank'},
+      {n:60, code:'      la   $a0, space       # load address of spacer for syscall', type:'instr', section:'Print loop',
+        note:'Loads the address of the single-space string into <code>$a0</code>.'},
+      {n:61, code:'      li   $v0, 4           # specify Print String service', type:'instr', section:'Print loop',
+        note:'Loads syscall 4 (print string) again.'},
+      {n:62, code:'      syscall               # print the spacer string', type:'instr', section:'Print loop',
+        note:'Prints the space separator after the number.'},
+      {n:63, code:'      ', type:'blank'},
+      {n:64, code:'      addi $t0, $t0, 4      # increment address of data to be printed', type:'instr', section:'Print loop',
+        note:'Advances the array pointer to the next word, 4 bytes ahead.'},
+      {n:65, code:'      addi $t1, $t1, -1     # decrement loop counter', type:'instr', section:'Print loop',
+        note:'Decrements the print loop\'s counter.'},
+      {n:66, code:'      bgtz $t1, out         # repeat while not finished', type:'instr', section:'Print loop',
+        note:'If numbers remain to print, branch back to <code>out</code>; otherwise fall through and finish up.'},
+      {n:67, code:'      ', type:'blank'},
+      {n:68, code:'      jr   $ra              # return from subroutine', type:'instr', section:'Return',
+        note:'<code>jr</code> = "jump register." Returns control to whatever instruction follows the original <code>jal print</code> call, using the return address <code>jal</code> saved in <code>$ra</code>.'},
+      {n:69, code:'# End of subroutine to print the numbers on one line', type:'comment', section:'Return',
+        note:'Marks the end of the subroutine.'},
+      {n:70, code:'###############################################################', type:'comment', section:'Return',
+        note:'Closes the visual divider opened above, at line 44.'},
+    ]
+  }
+};
+
+let currentFile = 'hello';
+let currentIndex = -1;
+
+function classify(line){
+  if(line.type==='blank') return '';
+  const t = line.code;
+  if(line.type==='comment') return `<span class="tok-comment">${escapeHtml(t)}</span>`;
+  if(line.type==='directive') return colorizeGeneric(t, 'tok-directive');
+  if(line.type==='label') return colorizeGeneric(t, 'tok-label');
+  return colorizeGeneric(t, 'tok-instr');
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Split off trailing comment (starting at #) and color the rest by type, comment always muted.
+function colorizeGeneric(text, cls){
+  const idx = text.indexOf('#');
+  if(idx === -1){
+    return `<span class="${cls}">${escapeHtml(text)}</span>`;
+  }
+  const head = text.slice(0, idx);
+  const tail = text.slice(idx);
+  return `<span class="${cls}">${escapeHtml(head)}</span><span class="tok-comment">${escapeHtml(tail)}</span>`;
+}
+
+function renderFile(key){
+  currentFile = key;
+  const f = FILES[key];
+  document.getElementById('panel-filename').textContent = f.filename;
+  document.getElementById('tagline').textContent = f.tagline;
+  document.querySelectorAll('.file-tab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.file === key);
+  });
+  const scroll = document.getElementById('code-scroll');
+  scroll.innerHTML = '';
+  f.lines.forEach((line, i)=>{
+    const row = document.createElement('div');
+    row.className = 'code-line' + (line.type==='blank' ? ' blank' : '');
+    row.dataset.index = i;
+    const isDivider = line.code && line.code.startsWith('###');
+    row.innerHTML = `<span class="ln">${line.n}</span><span class="code-text${isDivider?' divider-line':''}">${classify(line)}</span>`;
+    if(line.type !== 'blank'){
+      row.addEventListener('click', ()=> selectLine(i));
+    }
+    scroll.appendChild(row);
+  });
+  currentIndex = -1;
+  showIntro();
+}
+
+function showIntro(){
+  document.getElementById('note-linelabel').textContent = 'LINE —';
+  document.getElementById('note-section').textContent = '—';
+  document.getElementById('note-code').textContent = 'Select a line to begin.';
+  document.getElementById('note-body').textContent = 'Click any line on the left, or use Next to start at the top of the file.';
+  updateNavButtons();
+}
+
+function selectLine(i){
+  const f = FILES[currentFile];
+  // skip blanks if landed on one via nav
+  while(i >= 0 && i < f.lines.length && f.lines[i].type === 'blank'){
+    i += (i > currentIndex ? 1 : -1);
+  }
+  if(i < 0 || i >= f.lines.length) return;
+  currentIndex = i;
+  const line = f.lines[i];
+
+  document.querySelectorAll('.code-line').forEach(el=>el.classList.remove('active'));
+  const rows = document.querySelectorAll('.code-line');
+  rows[i].classList.add('active');
+  rows[i].scrollIntoView({block:'nearest'});
+
+  document.getElementById('note-linelabel').textContent = 'LINE ' + line.n;
+  document.getElementById('note-section').textContent = line.section || '';
+  document.getElementById('note-code').textContent = line.code.trim().length ? line.code : '(blank line)';
+  document.getElementById('note-body').innerHTML = line.note || 'No annotation for this line.';
+  updateNavButtons();
+}
+
+function updateNavButtons(){
+  document.getElementById('prev-btn').disabled = currentIndex <= 0;
+  document.getElementById('next-btn').disabled = currentIndex >= FILES[currentFile].lines.length - 1;
+}
+
+document.querySelectorAll('.file-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=> renderFile(btn.dataset.file));
+});
+
+document.getElementById('prev-btn').addEventListener('click', ()=>{
+  if(currentIndex <= 0) return;
+  selectLine(currentIndex - 1);
+});
+document.getElementById('next-btn').addEventListener('click', ()=>{
+  const f = FILES[currentFile];
+  if(currentIndex >= f.lines.length - 1) return;
+  selectLine(currentIndex + 1);
+});
+
+document.getElementById('legend-toggle').addEventListener('click', ()=>{
+  document.getElementById('legend').classList.toggle('open');
+});
+
+renderFile('hello');
+</script>
+</body>
+</html>
