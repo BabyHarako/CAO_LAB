@@ -90,6 +90,42 @@
     color: var(--ink-faint);
     margin-right: 4px;
   }
+  .labbar{
+    display:flex;
+    gap:10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items:center;
+  }
+  .lab-tab{
+    font-family:'IBM Plex Sans Condensed', sans-serif;
+    font-weight:700;
+    letter-spacing: 0.03em;
+    background: transparent;
+    border: 1px solid var(--divider);
+    color: var(--ink-dim);
+    padding: 10px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .lab-tab:hover{ color: var(--ink); border-color: var(--sky); }
+  .lab-tab.active{
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg-deep);
+  }
+  .lab-desc{
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  #file-tabs{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
   .file-tab{
     font-family:'IBM Plex Mono', monospace;
     background: var(--panel-2);
@@ -233,6 +269,11 @@
     font-size: 0.9em;
     color: var(--sky);
   }
+  .note-body .reg-role{
+    color: var(--ink-faint);
+    font-size: 0.85em;
+    font-style: italic;
+  }
   .note-breakdown{
     display:flex;
     flex-direction:column;
@@ -372,10 +413,16 @@
     </div>
   </header>
 
-  <div class="filebar">
+  <div class="labbar">
+    <span class="filebar-label">LAB —</span>
+    <button class="lab-tab active" data-lab="lab2">Lab 2</button>
+    <button class="lab-tab" data-lab="lab3">Lab 3</button>
+    <span class="lab-desc" id="lab-desc"></span>
+  </div>
+
+  <div class="filebar" id="filebar">
     <span class="filebar-label">FILE —</span>
-    <button class="file-tab active" data-file="hello">hello.asm</button>
-    <button class="file-tab" data-file="fib">Fibonacci.asm</button>
+    <span id="file-tabs"></span>
     <span class="file-tagline" id="tagline"></span>
   </div>
 
@@ -457,7 +504,11 @@
 </div>
 
 <script>
-const FILES = {
+const LABS = {
+  lab2: {
+  label: 'Lab 2',
+  desc: 'Pre-lab: MIPS program structure &amp; system calls',
+  files: {
   hello: {
     filename: 'hello.asm',
     tagline: 'The smallest complete MIPS program: print a string, then exit.',
@@ -640,8 +691,285 @@ const FILES = {
         note:'Closes the visual divider opened above, at line 44.'},
     ]
   }
+  } // end lab2 files
+  },
+  lab3: {
+  label: 'Lab 3',
+  desc: 'MARS syscalls tour: dialogs, floats, sleep, randomness, string I/O',
+  files: {
+  dialog: {
+    filename: 'dialog_box.asm',
+    tagline: 'Uses MARS GUI syscalls to pop up an input dialog, then echo it in a message box.',
+    lines: [
+      {n:1, code:'# Program File: dialog_box.asm', type:'comment', section:'Header',
+        note:'Header comment naming the file.'},
+      {n:2, code:'# Purpose: Open an input dialog box to read a string, then show it in a message box', type:'comment', section:'Header',
+        note:'Explains the program\'s goal: use MARS\'s GUI-style syscalls (rather than the console) to get a string from the user and display it back.'},
+      {n:3, code:'', type:'blank'},
+      {n:4, code:'.text', type:'directive', section:'Setup',
+        note:'Starts the text segment — the instructions below.'},
+      {n:5, code:'.globl main', type:'directive', section:'Setup',
+        note:'Declares <code>main</code> as globally visible — this program\'s entry point.'},
+      {n:6, code:'main:', type:'label', section:'Setup',
+        note:'Marks where execution begins.'},
+      {n:7, code:'    # Show input dialog and read string', type:'comment', section:'Input dialog',
+        note:'Introduces the block below: popping open a GUI text-input box.'},
+      {n:8, code:'    li $v0, 54          # InputDialogString', type:'instr', section:'Input dialog',
+        note:'Loads 54 into <code>$v0</code> — the service code for <b>InputDialogString</b>, a MARS-only syscall that opens an actual GUI dialog box (a popup window), rather than reading from the plain console.'},
+      {n:9, code:'    la $a0, prompt', type:'instr', section:'Input dialog',
+        note:'Loads the address of <code>prompt</code> into <code>$a0</code> — the text this syscall displays as the dialog box\'s message/title.'},
+      {n:10, code:'    la $a1, input', type:'instr', section:'Input dialog',
+        note:'Loads the address of the <code>input</code> buffer into <code>$a1</code> — where the dialog box will write whatever the user types.'},
+      {n:11, code:'    li $a2, 80', type:'instr', section:'Input dialog',
+        hints:{'$a2':'the maximum number of characters the dialog is allowed to write into input'},
+        note:'Loads 80 into <code>$a2</code> — the maximum number of characters the syscall may write into the buffer, matching the buffer\'s usable size (81 bytes reserved, 1 held back for the null terminator).'},
+      {n:12, code:'    syscall', type:'instr', section:'Input dialog',
+        note:'Triggers service 54: MARS pops open an actual dialog box titled/labelled with <code>prompt</code>, waits for the user to type something and press OK, then writes the typed text (null-terminated) into the <code>input</code> buffer.'},
+      {n:13, code:'', type:'blank'},
+      {n:14, code:'    # Show message box with the entered string', type:'comment', section:'Message box',
+        note:'Introduces the next block: popping open a second GUI box to display what was typed.'},
+      {n:15, code:'    li $v0, 59          # MessageDialogString', type:'instr', section:'Message box',
+        note:'Loads 59 into <code>$v0</code> — the service code for <b>MessageDialogString</b>, a MARS-only syscall that pops up a message box combining a label string with a string value.'},
+      {n:16, code:'    la $a0, blank', type:'instr', section:'Message box',
+        note:'Loads the address of <code>blank</code> into <code>$a0</code> — the label text shown in the box. Since <code>blank</code> is an empty string, no extra label text appears — only the value below.'},
+      {n:17, code:'    la $a1, input', type:'instr', section:'Message box',
+        hints:{'input':'now holds whatever the user typed into the dialog box a few lines above'},
+        note:'Loads the address of <code>input</code> into <code>$a1</code> — the value to display. This is the same buffer the dialog box just filled in, so the message box will show back exactly what the user typed.'},
+      {n:18, code:'    syscall', type:'instr', section:'Message box',
+        note:'Triggers service 59: pops open a message box combining <code>blank</code>\'s (empty) label with the string now sitting in <code>input</code>.'},
+      {n:19, code:'', type:'blank'},
+      {n:20, code:'    # Exit the program', type:'comment', section:'Exit'},
+      {n:21, code:'    li $v0, 10', type:'instr', section:'Exit',
+        note:'Loads syscall 10 — "exit."'},
+      {n:22, code:'    syscall', type:'instr', section:'Exit',
+        note:'Executes the exit, ending the program after the user closes the message box.'},
+      {n:23, code:'', type:'blank'},
+      {n:24, code:'.data', type:'directive', section:'Data segment',
+        note:'Starts the data segment, where the three items below are declared.'},
+      {n:25, code:'prompt: .asciiz "Please write a string: "', type:'label', section:'Data segment',
+        note:'The string shown as the input dialog\'s message, asking the user to type something.'},
+      {n:26, code:'blank:  .asciiz ""', type:'label', section:'Data segment',
+        note:'An empty string — zero characters, just the terminating null byte. Used as a "no label" placeholder for the message box.'},
+      {n:27, code:'input:  .space 81', type:'label', section:'Data segment',
+        note:'Reserves 81 <i>uninitialized</i> bytes of memory as a buffer — room for up to 80 typed characters plus a null terminator. Unlike <code>.asciiz</code>, <code>.space</code> doesn\'t put any particular text there; it just carves out empty room to be filled in later (by the dialog box, in this program).'},
+    ]
+  },
+  floatio: {
+    filename: 'float_io.asm',
+    tagline: 'Reads a floating-point number from the user with syscalls, then prints it back.',
+    lines: [
+      {n:1, code:'# Program File: float_io.asm', type:'comment', section:'Header'},
+      {n:2, code:'# Purpose: Read a floating-point number from the user and print it back', type:'comment', section:'Header'},
+      {n:3, code:'', type:'blank'},
+      {n:4, code:'.text', type:'directive', section:'Setup'},
+      {n:5, code:'.globl main', type:'directive', section:'Setup'},
+      {n:6, code:'main:', type:'label', section:'Setup'},
+      {n:7, code:'    # Prompt for the float', type:'comment', section:'Prompt'},
+      {n:8, code:'    li $v0, 4', type:'instr', section:'Prompt',
+        note:'Loads syscall 4 — print string.'},
+      {n:9, code:'    la $a0, prompt', type:'instr', section:'Prompt',
+        note:'Loads the address of <code>prompt</code> — the text asking the user to type a floating-point number.'},
+      {n:10, code:'    syscall', type:'instr', section:'Prompt',
+        note:'Prints the prompt to the console.'},
+      {n:11, code:'', type:'blank'},
+      {n:12, code:'    # Read the float (returns in $f0)', type:'comment', section:'Read float'},
+      {n:13, code:'    li $v0, 6', type:'instr', section:'Read float',
+        note:'Loads 6 into <code>$v0</code> — the service code for <b>ReadFloat</b>, which pauses and waits for the user to type a decimal number on the console.'},
+      {n:14, code:'    syscall', type:'instr', section:'Read float',
+        note:'Triggers the read. Unlike integer/string reads, the typed value comes back in a <i>floating-point</i> register, <code>$f0</code> — not <code>$v0</code>, since $v0 only holds plain 32-bit integers.'},
+      {n:15, code:'    mov.s $f12, $f0     # move value into $f12 for printing', type:'instr', section:'Read float',
+        hints:{'$f0':'holds the float the user just typed, from the syscall above'},
+        note:'<code>mov.s</code> = "move single-precision" — copies a floating-point register\'s value into another floating-point register. This copies the typed number from <code>$f0</code> into <code>$f12</code>, because the print-float syscall below reads its value from $f12, not $f0 — the two syscalls use different registers by convention.'},
+      {n:16, code:'', type:'blank'},
+      {n:17, code:'    # Print label', type:'comment', section:'Print result'},
+      {n:18, code:'    li $v0, 4', type:'instr', section:'Print result',
+        note:'Loads syscall 4 — print string.'},
+      {n:19, code:'    la $a0, out1', type:'instr', section:'Print result',
+        note:'Loads the address of <code>out1</code> — the label text "Your floating point number is ".'},
+      {n:20, code:'    syscall', type:'instr', section:'Print result',
+        note:'Prints that label.'},
+      {n:21, code:'', type:'blank'},
+      {n:22, code:'    # Print the float (reads from $f12)', type:'comment', section:'Print result'},
+      {n:23, code:'    li $v0, 2', type:'instr', section:'Print result',
+        note:'Loads 2 into <code>$v0</code> — the service code for <b>PrintFloat</b>.'},
+      {n:24, code:'    syscall', type:'instr', section:'Print result',
+        hints:{'$f12':'holds the float value, copied into place two steps ago'},
+        note:'Triggers the print. It reads the value sitting in <code>$f12</code> (copied there on line 15) and prints it as a decimal number.'},
+      {n:25, code:'', type:'blank'},
+      {n:26, code:'    # Print newline', type:'comment', section:'Newline'},
+      {n:27, code:'    li $v0, 11', type:'instr', section:'Newline',
+        note:'Loads 11 into <code>$v0</code> — the service code for <b>PrintChar</b>, which prints a single character whose ASCII code sits in $a0.'},
+      {n:28, code:'    li $a0, 10', type:'instr', section:'Newline',
+        note:'Loads 10 into <code>$a0</code> — the ASCII code for a newline character ("\\n"). This is the character the PrintChar syscall below will print.'},
+      {n:29, code:'    syscall', type:'instr', section:'Newline',
+        note:'Prints that one character — a newline — moving the cursor to the next line.'},
+      {n:30, code:'', type:'blank'},
+      {n:31, code:'    # Exit the program', type:'comment', section:'Exit'},
+      {n:32, code:'    li $v0, 10', type:'instr', section:'Exit', note:'Loads syscall 10 — "exit."'},
+      {n:33, code:'    syscall', type:'instr', section:'Exit', note:'Executes the exit.'},
+      {n:34, code:'', type:'blank'},
+      {n:35, code:'.data', type:'directive', section:'Data segment'},
+      {n:36, code:'prompt: .asciiz "Input a floating point number: "', type:'label', section:'Data segment',
+        note:'The prompt text printed before reading the float.'},
+      {n:37, code:'out1:   .asciiz "Your floating point number is "', type:'label', section:'Data segment',
+        note:'The label text printed right before the float\'s value.'},
+    ]
+  },
+  sleep: {
+    filename: 'sleep_timer.asm',
+    tagline: 'Prints a message, pauses for 4 seconds using a syscall, then prints another.',
+    lines: [
+      {n:1, code:'# Program File: sleep_timer.asm', type:'comment', section:'Header'},
+      {n:2, code:'# Purpose: Sleep for 4 seconds before exiting', type:'comment', section:'Header'},
+      {n:3, code:'', type:'blank'},
+      {n:4, code:'.text', type:'directive', section:'Setup'},
+      {n:5, code:'.globl main', type:'directive', section:'Setup'},
+      {n:6, code:'main:', type:'label', section:'Setup'},
+      {n:7, code:'    # Print starting message', type:'comment', section:'Start message'},
+      {n:8, code:'    li $v0, 4', type:'instr', section:'Start message', note:'Loads syscall 4 — print string.'},
+      {n:9, code:'    la $a0, msg1', type:'instr', section:'Start message',
+        note:'Loads the address of <code>msg1</code>, "This is where it starts."'},
+      {n:10, code:'    syscall', type:'instr', section:'Start message', note:'Prints it.'},
+      {n:11, code:'', type:'blank'},
+      {n:12, code:'    # Sleep for 4000 milliseconds', type:'comment', section:'Sleep'},
+      {n:13, code:'    li $v0, 32          # service 32 = sleep', type:'instr', section:'Sleep',
+        note:'Loads 32 into <code>$v0</code> — the service code for <b>Sleep</b>, which pauses program execution for a given number of milliseconds.'},
+      {n:14, code:'    li $a0, 4000        # milliseconds', type:'instr', section:'Sleep',
+        note:'Loads 4000 into <code>$a0</code> — the argument the sleep syscall reads: how long to pause, in milliseconds. 4000 ms = 4 seconds.'},
+      {n:15, code:'    syscall', type:'instr', section:'Sleep',
+        note:'Triggers the pause. Execution stops here for 4 seconds — nothing else runs — before moving to the next instruction.'},
+      {n:16, code:'', type:'blank'},
+      {n:17, code:'    # Print exiting message', type:'comment', section:'Exit message'},
+      {n:18, code:'    li $v0, 4', type:'instr', section:'Exit message', note:'Loads syscall 4 — print string.'},
+      {n:19, code:'    la $a0, msg2', type:'instr', section:'Exit message',
+        note:'Loads the address of <code>msg2</code>, the "4 seconds have already passed..." message.'},
+      {n:20, code:'    syscall', type:'instr', section:'Exit message', note:'Prints it.'},
+      {n:21, code:'', type:'blank'},
+      {n:22, code:'    # Exit the program', type:'comment', section:'Exit'},
+      {n:23, code:'    li $v0, 10', type:'instr', section:'Exit', note:'Loads syscall 10 — "exit."'},
+      {n:24, code:'    syscall', type:'instr', section:'Exit', note:'Executes the exit.'},
+      {n:25, code:'', type:'blank'},
+      {n:26, code:'.data', type:'directive', section:'Data segment'},
+      {n:27, code:'msg1: .asciiz "This is where it starts.\\n"', type:'label', section:'Data segment',
+        note:'The message printed right before the 4-second pause.'},
+      {n:28, code:'msg2: .asciiz "4 seconds have already passed. Exiting the program...\\n"', type:'label', section:'Data segment',
+        note:'The message printed right after the pause ends.'},
+    ]
+  },
+  random: {
+    filename: 'random_number.asm',
+    tagline: 'Uses a MARS syscall to generate a random number from 1 to 100.',
+    lines: [
+      {n:1, code:'# Program File: random_number.asm', type:'comment', section:'Header'},
+      {n:2, code:'# Purpose: Print a random number between 1 and 100', type:'comment', section:'Header'},
+      {n:3, code:'', type:'blank'},
+      {n:4, code:'.text', type:'directive', section:'Setup'},
+      {n:5, code:'.globl main', type:'directive', section:'Setup'},
+      {n:6, code:'main:', type:'label', section:'Setup'},
+      {n:7, code:'    # Generate random int in range 0-99', type:'comment', section:'Generate'},
+      {n:8, code:'    li $v0, 42          # service 42 = random int range', type:'instr', section:'Generate',
+        note:'Loads 42 into <code>$v0</code> — the service code for <b>RandomIntRange</b>, which generates a pseudorandom integer within a given range.'},
+      {n:9, code:'    li $a0, 0           # random generator id', type:'instr', section:'Generate',
+        note:'Loads 0 into <code>$a0</code> — the ID of which random-number generator to use. MARS lets a program keep several independent generators; 0 selects the default one. (Note: $a0 is an <i>input</i> here, even though a few lines down it gets reused to hold an unrelated <i>output</i>.)'},
+      {n:10, code:'    li $a1, 100         # upper bound (exclusive)', type:'instr', section:'Generate',
+        note:'Loads 100 into <code>$a1</code> — the exclusive upper bound. The generator will return a value from 0 up to but not including 100, i.e. somewhere in 0–99.'},
+      {n:11, code:'    syscall', type:'instr', section:'Generate',
+        note:'Runs the generator. The result — a random integer from 0 to 99 — comes back in <code>$a0</code>, overwriting the generator-ID value that was there before.'},
+      {n:12, code:'    move $t0, $a0       # result comes back in $a0', type:'instr', section:'Generate',
+        hints:{'$a0':'currently holds the random 0-99 result from the syscall above'},
+        note:'<code>move</code> is a pseudo-instruction — shorthand for "copy one register into another" (it expands to <code>add $t0, $a0, $zero</code>). This copies the random 0–99 value out of $a0 into <code>$t0</code>, freeing $a0 up to be reused again later.'},
+      {n:13, code:'    addi $t0, $t0, 1    # shift range from 0-99 to 1-100', type:'instr', section:'Generate',
+        note:'Adds 1 to $t0, shifting the range from 0–99 up to 1–100 — since the assignment asks for a number between 1 and 100, not 0 and 99.'},
+      {n:14, code:'', type:'blank'},
+      {n:15, code:'    # Print label', type:'comment', section:'Print'},
+      {n:16, code:'    li $v0, 4', type:'instr', section:'Print', note:'Loads syscall 4 — print string.'},
+      {n:17, code:'    la $a0, msg', type:'instr', section:'Print',
+        note:'Loads the address of <code>msg</code>, the label text.'},
+      {n:18, code:'    syscall', type:'instr', section:'Print', note:'Prints it.'},
+      {n:19, code:'', type:'blank'},
+      {n:20, code:'    # Print the number', type:'comment', section:'Print'},
+      {n:21, code:'    li $v0, 1', type:'instr', section:'Print', note:'Loads syscall 1 — print integer.'},
+      {n:22, code:'    move $a0, $t0', type:'instr', section:'Print',
+        hints:{'$t0':'holds the final random number, 1-100, computed a few lines above'},
+        note:'Copies the final 1–100 value from <code>$t0</code> back into <code>$a0</code>, the argument register the print-integer syscall reads from.'},
+      {n:23, code:'    syscall', type:'instr', section:'Print', note:'Prints the random number.'},
+      {n:24, code:'', type:'blank'},
+      {n:25, code:'    # Exit the program', type:'comment', section:'Exit'},
+      {n:26, code:'    li $v0, 10', type:'instr', section:'Exit', note:'Loads syscall 10 — "exit."'},
+      {n:27, code:'    syscall', type:'instr', section:'Exit', note:'Executes the exit.'},
+      {n:28, code:'', type:'blank'},
+      {n:29, code:'.data', type:'directive', section:'Data segment'},
+      {n:30, code:'msg: .asciiz "Random number between 1-100 is: "', type:'label', section:'Data segment',
+        note:'The label text printed right before the generated number.'},
+    ]
+  },
+  siomai: {
+    filename: 'siomai.asm',
+    tagline: 'Reads a typed string from the console and echoes it back inside a sentence.',
+    lines: [
+      {n:1, code:'# Program File: siomai.asm', type:'comment', section:'Header'},
+      {n:2, code:'# Purpose: Prompt user for favorite siomai and print it back', type:'comment', section:'Header'},
+      {n:3, code:'', type:'blank'},
+      {n:4, code:'.text', type:'directive', section:'Setup'},
+      {n:5, code:'.globl main', type:'directive', section:'Setup'},
+      {n:6, code:'main:', type:'label', section:'Setup'},
+      {n:7, code:'    # Prompt for the siomai type', type:'comment', section:'Prompt'},
+      {n:8, code:'    li $v0, 4', type:'instr', section:'Prompt', note:'Loads syscall 4 — print string.'},
+      {n:9, code:'    la $a0, prompt', type:'instr', section:'Prompt',
+        note:'Loads the address of <code>prompt</code>, asking what type of siomai the user likes.'},
+      {n:10, code:'    syscall', type:'instr', section:'Prompt', note:'Prints it.'},
+      {n:11, code:'', type:'blank'},
+      {n:12, code:'    # Read the string', type:'comment', section:'Read string'},
+      {n:13, code:'    li $v0, 8', type:'instr', section:'Read string',
+        note:'Loads 8 into <code>$v0</code> — the service code for <b>ReadString</b>, which reads a line of keyboard input into a memory buffer.'},
+      {n:14, code:'    la $a0, input', type:'instr', section:'Read string',
+        note:'Loads the address of the <code>input</code> buffer into <code>$a0</code> — where the typed text will be written.'},
+      {n:15, code:'    lw $a1, inputSize', type:'instr', section:'Read string',
+        note:'<code>lw</code>, not <code>la</code>: this reads the <i>value</i> stored at <code>inputSize</code> (which is 80) into <code>$a1</code>. The read-string syscall needs the actual number 80 in $a1 (the max characters to read), not the address of where 80 is stored — that\'s why this line uses lw here instead of la.'},
+      {n:16, code:'    syscall', type:'instr', section:'Read string',
+        note:'Reads up to 80 typed characters from the keyboard into the <code>input</code> buffer, automatically null-terminating the result.'},
+      {n:17, code:'', type:'blank'},
+      {n:18, code:'    # Print "So you like "', type:'comment', section:'Print result'},
+      {n:19, code:'    li $v0, 4', type:'instr', section:'Print result', note:'Loads syscall 4 — print string.'},
+      {n:20, code:'    la $a0, part1', type:'instr', section:'Print result',
+        note:'Loads the address of <code>part1</code>, "\\nSo you like ".'},
+      {n:21, code:'    syscall', type:'instr', section:'Print result', note:'Prints it.'},
+      {n:22, code:'', type:'blank'},
+      {n:23, code:'    # Print the entered siomai type', type:'comment', section:'Print result'},
+      {n:24, code:'    li $v0, 4', type:'instr', section:'Print result', note:'Loads syscall 4 — print string.'},
+      {n:25, code:'    la $a0, input', type:'instr', section:'Print result',
+        hints:{'input':'now holds whatever siomai type the user typed in, from the read a few lines above'},
+        note:'Reuses the <code>input</code> buffer\'s address to print back whatever the user just typed.'},
+      {n:26, code:'    syscall', type:'instr', section:'Print result', note:'Prints the typed siomai type.'},
+      {n:27, code:'', type:'blank'},
+      {n:28, code:'    # Print " siomai"', type:'comment', section:'Print result'},
+      {n:29, code:'    li $v0, 4', type:'instr', section:'Print result', note:'Loads syscall 4 — print string.'},
+      {n:30, code:'    la $a0, part2', type:'instr', section:'Print result',
+        note:'Loads the address of <code>part2</code>, " siomai" — completing the sentence.'},
+      {n:31, code:'    syscall', type:'instr', section:'Print result', note:'Prints it.'},
+      {n:32, code:'', type:'blank'},
+      {n:33, code:'    # Exit the program', type:'comment', section:'Exit'},
+      {n:34, code:'    li $v0, 10', type:'instr', section:'Exit', note:'Loads syscall 10 — "exit."'},
+      {n:35, code:'    syscall', type:'instr', section:'Exit', note:'Executes the exit.'},
+      {n:36, code:'', type:'blank'},
+      {n:37, code:'.data', type:'directive', section:'Data segment'},
+      {n:38, code:'prompt:     .asciiz "What type of siomai do you like? "', type:'label', section:'Data segment',
+        note:'The prompt text asking for a favorite siomai type.'},
+      {n:39, code:'part1:      .asciiz "\\nSo you like "', type:'label', section:'Data segment',
+        note:'The first half of the reply sentence, starting on a new line.'},
+      {n:40, code:'part2:      .asciiz " siomai"', type:'label', section:'Data segment',
+        note:'The second half of the reply sentence, completing "...siomai."'},
+      {n:41, code:'input:      .space 81', type:'label', section:'Data segment',
+        note:'Reserves an 81-byte uninitialized buffer to hold whatever the user types — 80 usable characters plus a null terminator.'},
+      {n:42, code:'inputSize:  .word 80', type:'label', section:'Data segment',
+        note:'A single word holding the number 80 — the maximum character count later loaded (by value, via <code>lw</code>) into $a1 for the read-string syscall on line 15.'},
+    ]
+  }
+  } // end lab3 files
+  }
 };
 
+let currentLab = 'lab2';
 let currentFile = 'hello';
 let currentIndex = -1;
 
@@ -660,13 +988,43 @@ const REGISTERS = {
   '$t6':'temporary register 6','$t7':'temporary register 7','$t8':'temporary register 8','$t9':'temporary register 9',
   '$s0':'saved register 0','$s1':'saved register 1','$s2':'saved register 2','$s3':'saved register 3',
   '$s4':'saved register 4','$s5':'saved register 5','$s6':'saved register 6','$s7':'saved register 7',
+  '$f0': 'floating-point register 0 — where a read-float syscall returns the value it read',
+  '$f12': 'floating-point register 12 — the register a print-float syscall reads its value from',
 };
+// Short parenthetical role names used to auto-annotate bare register mentions in prose,
+// e.g. "$a0" -> "$a0 (argument register 0)", the first time it appears in a given note.
+const REG_ROLE_SHORT = {
+  '$zero': 'always zero',
+  '$a0':'argument register 0','$a1':'argument register 1','$a2':'argument register 2','$a3':'argument register 3',
+  '$v0':'value/return register 0','$v1':'value/return register 1',
+  '$ra':'return-address register',
+  '$t0':'temporary register 0','$t1':'temporary register 1','$t2':'temporary register 2',
+  '$t3':'temporary register 3','$t4':'temporary register 4','$t5':'temporary register 5',
+  '$t6':'temporary register 6','$t7':'temporary register 7','$t8':'temporary register 8','$t9':'temporary register 9',
+  '$s0':'saved register 0','$s1':'saved register 1','$s2':'saved register 2','$s3':'saved register 3',
+  '$s4':'saved register 4','$s5':'saved register 5','$s6':'saved register 6','$s7':'saved register 7',
+  '$f0':'float register 0','$f12':'float register 12',
+};
+function annotateRegistersInNote(html){
+  if(!html) return html;
+  // Un-wrap any existing <code>$reg</code> spans so every mention is handled uniformly below.
+  html = html.replace(/<code>(\$[a-zA-Z0-9]+)<\/code>/g, '$1');
+  const seen = new Set();
+  return html.replace(/\$[a-zA-Z]+[0-9]*/g, (reg)=>{
+    const role = REG_ROLE_SHORT[reg];
+    if(!role) return `<code>${reg}</code>`;
+    if(seen.has(reg)) return `<code>${reg}</code>`;
+    seen.add(reg);
+    return `<code>${reg}</code> <span class="reg-role">(${role})</span>`;
+  });
+}
 function describeRegister(reg){
   if(REGISTERS[reg]) return REGISTERS[reg] + (/^\$t\d$/.test(reg) ? ' — a short-lived scratch value, not expected to survive a subroutine call' : (/^\$s\d$/.test(reg) ? ' — meant to keep its value across a whole subroutine or loop' : ''));
   if(/^\$s\d+$/.test(reg)) return 'a saved register — meant to keep its value across a whole subroutine or loop';
   if(/^\$t\d+$/.test(reg)) return 'a temporary register — a short-lived scratch value';
   if(/^\$a\d+$/.test(reg)) return 'an argument register — used to pass a value into a syscall or subroutine';
   if(/^\$v\d+$/.test(reg)) return 'a value register — syscall codes go in here, return values come out here';
+  if(/^\$f\d+$/.test(reg)) return 'a floating-point register — holds a decimal number, separate from the regular $t/$s/$a/$v registers';
   return 'a CPU register';
 }
 const INSTR = {
@@ -682,6 +1040,8 @@ const INSTR = {
   jal: 'jump and link — jumps to a subroutine and saves the return address in $ra so it can come back',
   jr: 'jump register — jumps to whatever address is held in a register (used to return from a subroutine)',
   syscall: 'triggers a system call — the OS/simulator looks at $v0 (and often $a0) to decide what service to run',
+  move: 'move — a pseudo-instruction that copies one register\'s value into another (shorthand for add $rd, $rs, $zero)',
+  'mov.s': 'move single-precision — copies a floating-point register\'s value into another floating-point register',
 };
 const DIRECTIVES = {
   '.data': 'directive — marks the start of the data segment (variables and constants, not instructions)',
@@ -689,8 +1049,17 @@ const DIRECTIVES = {
   '.globl': 'directive — declares the following label as globally visible, typically the entry point',
   '.word': 'directive — reserves one or more 4-byte memory words, optionally with initial values',
   '.asciiz': 'directive — stores a null-terminated ASCII string in memory',
+  '.space': 'directive — reserves a block of uninitialized bytes in memory, often used as an input buffer',
 };
-const SYSCALL_CODES = {'1':'print integer', '4':'print string', '5':'read integer', '10':'exit'};
+const SYSCALL_CODES = {
+  '1':'print integer', '2':'print float (value read from $f12)', '4':'print string',
+  '5':'read integer', '6':'read float (result returned in $f0)', '8':'read string (buffer address in $a0, max length in $a1)',
+  '10':'exit', '11':'print character (character code in $a0)',
+  '32':'sleep for N milliseconds (N given in $a0)',
+  '42':'random int range (generator id in $a0, exclusive upper bound in $a1; result returned in $a0)',
+  '54':'InputDialogString — GUI dialog box that reads a typed string into a buffer',
+  '59':'MessageDialogString — GUI message box that displays a label plus a string value',
+};
 const LABELS = {
   hello: {
     msg: 'the string "Hello, MIPS" declared on line 4',
@@ -706,6 +1075,34 @@ const LABELS = {
     out: 'the top of the print loop, defined on line 56',
     space: 'the single-space separator string declared on line 47',
     head: 'the heading string declared on line 48',
+  },
+  dialog: {
+    prompt: 'the string "Please write a string: " declared on line 25, shown as the dialog box\'s message',
+    input: 'an 81-byte buffer declared on line 27, where the user\'s typed string gets stored',
+    blank: 'an empty string declared on line 26, used as a blank label for the message box',
+    main: 'this program\'s entry point, defined on line 6',
+  },
+  floatio: {
+    prompt: 'the prompt string declared on line 36',
+    out1: 'the label string "Your floating point number is " declared on line 37',
+    main: 'this program\'s entry point, defined on line 6',
+  },
+  sleep: {
+    msg1: 'the starting message declared on line 27',
+    msg2: 'the exiting message declared on line 28',
+    main: 'this program\'s entry point, defined on line 6',
+  },
+  random: {
+    msg: 'the label string declared on line 30',
+    main: 'this program\'s entry point, defined on line 6',
+  },
+  siomai: {
+    prompt: 'the prompt string declared on line 38',
+    part1: 'the string "\\nSo you like " declared on line 39',
+    part2: 'the string " siomai" declared on line 40',
+    input: 'an 81-byte buffer declared on line 41, where the typed siomai type gets stored',
+    inputSize: 'a word holding 80, declared on line 42 — the max length passed (by value) to the read-string syscall',
+    main: 'this program\'s entry point, defined on line 6',
   }
 };
 
@@ -722,6 +1119,9 @@ function describeDirectiveArgs(mnem, args){
   if(mnem === '.asciiz'){
     const display = args.replace(/\\n/g, '⏎').replace(/^"|"$/g, '');
     return `A null-terminated string: "${display}". Stored as raw ASCII bytes with an extra zero byte at the end marking where it stops — the same convention as a C string.`;
+  }
+  if(mnem === '.space'){
+    return `Reserves ${args} uninitialized bytes of memory — empty room, not initialized to anything in particular, typically used as a buffer to be filled in later (e.g. by a syscall reading user input).`;
   }
   return '';
 }
@@ -831,9 +1231,35 @@ function colorizeGeneric(text, cls){
   return `<span class="${cls}">${escapeHtml(head)}</span><span class="tok-comment">${escapeHtml(tail)}</span>`;
 }
 
+function currentLabFiles(){
+  return LABS[currentLab].files;
+}
+
+function renderLab(labKey){
+  currentLab = labKey;
+  const lab = LABS[labKey];
+  document.querySelectorAll('.lab-tab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.lab === labKey);
+  });
+  document.getElementById('lab-desc').innerHTML = lab.desc || '';
+
+  const fileTabsEl = document.getElementById('file-tabs');
+  fileTabsEl.innerHTML = '';
+  const fileKeys = Object.keys(lab.files);
+  fileKeys.forEach((key, idx)=>{
+    const btn = document.createElement('button');
+    btn.className = 'file-tab' + (idx===0 ? ' active' : '');
+    btn.dataset.file = key;
+    btn.textContent = lab.files[key].filename;
+    btn.addEventListener('click', ()=> renderFile(key));
+    fileTabsEl.appendChild(btn);
+  });
+  renderFile(fileKeys[0]);
+}
+
 function renderFile(key){
   currentFile = key;
-  const f = FILES[key];
+  const f = currentLabFiles()[key];
   document.getElementById('panel-filename').textContent = f.filename;
   document.getElementById('tagline').textContent = f.tagline;
   document.querySelectorAll('.file-tab').forEach(b=>{
@@ -867,7 +1293,7 @@ function showIntro(){
 }
 
 function selectLine(i){
-  const f = FILES[currentFile];
+  const f = currentLabFiles()[currentFile];
   // skip blanks if landed on one via nav
   while(i >= 0 && i < f.lines.length && f.lines[i].type === 'blank'){
     i += (i > currentIndex ? 1 : -1);
@@ -896,17 +1322,17 @@ function selectLine(i){
     breakdownEl.innerHTML = '<div class="tok-desc">A blank line — it has no code, and exists only to visually separate sections of the file.</div>';
   }
   summaryLabel.style.display = line.note ? 'block' : 'none';
-  document.getElementById('note-body').innerHTML = line.note || '';
+  document.getElementById('note-body').innerHTML = line.note ? annotateRegistersInNote(line.note) : '';
   updateNavButtons();
 }
 
 function updateNavButtons(){
   document.getElementById('prev-btn').disabled = currentIndex <= 0;
-  document.getElementById('next-btn').disabled = currentIndex >= FILES[currentFile].lines.length - 1;
+  document.getElementById('next-btn').disabled = currentIndex >= currentLabFiles()[currentFile].lines.length - 1;
 }
 
-document.querySelectorAll('.file-tab').forEach(btn=>{
-  btn.addEventListener('click', ()=> renderFile(btn.dataset.file));
+document.querySelectorAll('.lab-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=> renderLab(btn.dataset.lab));
 });
 
 document.getElementById('prev-btn').addEventListener('click', ()=>{
@@ -914,7 +1340,7 @@ document.getElementById('prev-btn').addEventListener('click', ()=>{
   selectLine(currentIndex - 1);
 });
 document.getElementById('next-btn').addEventListener('click', ()=>{
-  const f = FILES[currentFile];
+  const f = currentLabFiles()[currentFile];
   if(currentIndex >= f.lines.length - 1) return;
   selectLine(currentIndex + 1);
 });
@@ -923,7 +1349,7 @@ document.getElementById('legend-toggle').addEventListener('click', ()=>{
   document.getElementById('legend').classList.toggle('open');
 });
 
-renderFile('hello');
+renderLab('lab2');
 </script>
 </body>
 </html>
